@@ -6,20 +6,20 @@ pub enum Kind {
 }
 
 #[derive(Debug, Clone)]
-pub struct Token {
+pub struct Token<'a> {
     pub kind: Kind,
-    pub source: Vec<u8>,
+    pub source: &'a str,
 }
 
-impl Token {
-    pub fn new(kind: Kind, source: Vec<u8>) -> Self {
+impl<'a> Token<'a> {
+    pub fn new(kind: Kind, source: &'a str) -> Self {
         Token { kind, source }
     }
 
     pub fn new_empty(kind: Kind) -> Self {
         Token {
             kind,
-            source: vec![],
+            source: "",
         }
     }
 }

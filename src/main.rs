@@ -1,43 +1,56 @@
 mod token;
 
 use std::io::{self, BufRead, Write};
+use std::str::Chars;
 use token::{Kind as TokenKind, Token};
 
-struct Interpreter {
-    source: Vec<u8>,
+struct Interpreter<'a> {
+    source: &'a str,
+    chars: Chars<'a>,
     pos: usize,
-    current_token: Option<Token>,
+    current_token: Option<Token<'a>>,
 }
 
-impl Interpreter {
-    pub fn new<S: Into<String>>(text: S) -> Self {
+impl<'a> Interpreter<'a> {
+    pub fn new(source: &'a str) -> Self {
         Interpreter {
-            source: text.into().into_bytes(),
+            source,
+            chars: source.chars(),
             pos: 0,
             current_token: None,
         }
     }
 
-    fn next_token(&mut self) -> Result<Token, String> {
-        if self.pos > self.source.len() - 1 {
-            return Ok(Token::new_empty(TokenKind::Eof));
+    fn next_char(&mut self) -> Option<char> {
+        let result = self.chars.next();
+
+        if let Some(c) = result {
+            self.pos += c.len_utf8();
         }
 
-        let current_char = self.source[self.pos];
+        result
+    }
 
-        if current_char.is_ascii_digit() {
-            self.pos += 1;
-            return Ok(Token::new(TokenKind::Integer, vec![current_char]));
-        }
-        if current_char == b'+' {
-            self.pos += 1;
-            return Ok(Token::new(TokenKind::Plus, vec![current_char]));
-        }
+    fn next_token(&mut self) -> Result<Token<'a>, String> {
+        let c = match self.next_char() {
+            Some(c) => c,
+            None => return Ok(Token::new_empty(TokenKind::Eof)),
+        };
 
-        Err(format!(
-            "Cannot process the character '{}' at position {}",
-            current_char as char, self.pos
-        ))
+        if c.is_ascii_digit() {
+            Ok(Token::new(TokenKind::Integer, self.span(1)))
+        } else if c == '+' {
+            Ok(Token::new(TokenKind::Plus, self.span(1)))
+        } else {
+            Err(format!(
+                "Cannot process the character '{}' at position {}",
+                c, self.pos
+            ))
+        }
+    }
+
+    fn span(&self, len: usize) -> &'a str {
+        self.source.get(self.pos - len..self.pos).unwrap()
     }
 
     fn eat(&mut self, expected: TokenKind) -> Result<(), String> {
@@ -81,23 +94,10 @@ impl Interpreter {
         // at this point INTEGER PLUS INTEGER sequence of tokens has been
         // successfully found and the method can just return the result of
         // adding two integers, thus effectively interpreting client input
-        let result = as_int(left.source) + as_int(right.source);
+        let result = left.source.parse::<i64>().unwrap() + right.source.parse::<i64>().unwrap();
 
         Ok(result)
     }
-}
-
-fn as_int(source: Vec<u8>) -> i64 {
-    let mut result: i64 = 0;
-
-    for elem in source {
-        assert!(elem >= b'0' && elem <= b'9');
-
-        result *= 10;
-        result += (elem - b'0') as i64;
-    }
-
-    result
 }
 
 fn run() -> Result<(), String> {
@@ -113,13 +113,17 @@ fn run() -> Result<(), String> {
         let text = match stdin.next() {
             Some(Ok(text)) => text,
             Some(Err(e)) => Err(format!("{}", e))?,
-            None => break Ok(()),
+            None => {
+                println!();
+                break Ok(());
+            }
         };
 
-        let mut interpreter = Interpreter::new(text);
+        let mut interpreter = Interpreter::new(&text);
+
         match interpreter.expr() {
             Ok(result) => println!("{}", result),
-            Err(e) => println!("{}", e)
+            Err(e) => println!("{}", e),
         }
     }
 }
