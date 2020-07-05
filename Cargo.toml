@@ -1,0 +1,8 @@
+[package]
+name = "rs-simple-interpreter"
+version = "0.1.0"
+authors = ["João D. Ferreira <jotomicron@gmail.com>"]
+edition = "2018"
+description = "A rust implementation guided by https://ruslanspivak.com/lsbasi-part1/"
+readme = "README.md"
+repository = "https://github.com/jdferreira/rs-simple-interpreter/"
