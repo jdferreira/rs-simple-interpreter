@@ -75,6 +75,8 @@ impl<'a> Interpreter<'a> {
             Ok(Token::new(TokenKind::Integer, self.span(len)))
         } else if c == '+' {
             Ok(Token::new(TokenKind::Plus, self.span(1)))
+        } else if c == '-' {
+            Ok(Token::new(TokenKind::Minus, self.span(1)))
         } else {
             Err(format!(
                 "Cannot process the character '{}' at position {}",
@@ -117,7 +119,12 @@ impl<'a> Interpreter<'a> {
 
         // we expect the current token to be a '+' token
         let op = self.current_token.clone().unwrap();
-        self.eat(TokenKind::Plus)?;
+        if op.kind != TokenKind::Plus && op.kind != TokenKind::Minus {
+            Err(format!("Unexpected token {:?}", op))?;
+        }
+        else {
+            self.current_token = Some(self.next_token()?);
+        }
 
         // we expect the current token to be a single-digit integer
         let right = self.current_token.clone().unwrap();
@@ -128,7 +135,13 @@ impl<'a> Interpreter<'a> {
         // at this point INTEGER PLUS INTEGER sequence of tokens has been
         // successfully found and the method can just return the result of
         // adding two integers, thus effectively interpreting client input
-        let result = left.source.parse::<i64>().unwrap() + right.source.parse::<i64>().unwrap();
+        let left = left.source.parse::<i64>().unwrap();
+        let right = right.source.parse::<i64>().unwrap();
+        let result = match op.kind {
+            TokenKind::Plus => left + right,
+            TokenKind::Minus => left - right,
+            _ => unreachable!(),
+        };
 
         Ok(result)
     }
