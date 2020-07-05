@@ -37,9 +37,27 @@ impl<'a> Interpreter<'a> {
     }
 
     fn next_token(&mut self) -> Result<Token<'a>, String> {
-        let c = match self.next_char() {
-            Some(c) => c,
-            None => return Ok(Token::new_empty(TokenKind::Eof)),
+        let c = {
+            let mut c = match self.next_char() {
+                Some(c) => c,
+                None => return Ok(Token::new_empty(TokenKind::Eof)),
+            };
+
+            if c.is_ascii_whitespace() {
+                loop {
+                    if let Some(next_c) = self.peek_char() {
+                        c = self.next_char().unwrap();
+
+                        if !next_c.is_ascii_whitespace() {
+                            break;
+                        }
+                    } else {
+                        return Ok(Token::new_empty(TokenKind::Eof))
+                    }
+                }
+            }
+
+            c
         };
 
         if c.is_ascii_digit() {
