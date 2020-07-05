@@ -1,12 +1,13 @@
 mod token;
 
 use std::io::{self, BufRead, Write};
+use std::iter::Peekable;
 use std::str::Chars;
 use token::{Kind as TokenKind, Token};
 
 struct Interpreter<'a> {
     source: &'a str,
-    chars: Chars<'a>,
+    chars: Peekable<Chars<'a>>,
     pos: usize,
     current_token: Option<Token<'a>>,
 }
@@ -15,7 +16,7 @@ impl<'a> Interpreter<'a> {
     pub fn new(source: &'a str) -> Self {
         Interpreter {
             source,
-            chars: source.chars(),
+            chars: source.chars().peekable(),
             pos: 0,
             current_token: None,
         }
@@ -31,6 +32,10 @@ impl<'a> Interpreter<'a> {
         result
     }
 
+    fn peek_char(&mut self) -> Option<char> {
+        self.chars.peek().cloned()
+    }
+
     fn next_token(&mut self) -> Result<Token<'a>, String> {
         let c = match self.next_char() {
             Some(c) => c,
@@ -38,7 +43,18 @@ impl<'a> Interpreter<'a> {
         };
 
         if c.is_ascii_digit() {
-            Ok(Token::new(TokenKind::Integer, self.span(1)))
+            let mut len = 1;
+
+            while let Some(next_c) = self.peek_char() {
+                if next_c.is_ascii_digit() {
+                    self.next_char();
+                    len += 1;
+                } else {
+                    break;
+                }
+            }
+
+            Ok(Token::new(TokenKind::Integer, self.span(len)))
         } else if c == '+' {
             Ok(Token::new(TokenKind::Plus, self.span(1)))
         } else {
