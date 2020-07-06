@@ -26,7 +26,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn advance(&mut self) -> &'a str{
+    fn advance(&mut self) -> &'a str {
         let start = self.byte_pos;
 
         if let Some(c) = self.current_char {
@@ -105,18 +105,23 @@ impl<'a> Interpreter<'a> {
         }
     }
 
+    /// Eat an Integer token and return its integer value
+    fn term(&mut self) -> Result<i64, String> {
+        Ok(self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap())
+    }
+
     fn expr(&mut self) -> Result<i64, String> {
-        // expt -> INTEGER PLUS INTEGER
-        // expt -> INTEGER MINUS INTEGER
+        let mut value = self.term()?;
 
-        // we expect the current token to be an integer
-        let left = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
+        while let Ok(op) = self.eat_alt(&[TokenKind::Plus, TokenKind::Minus]) {
+            let right = self.term()?;
 
-        // we expect the current token to be a '+' or '-' token
-        let op = self.eat_alt(&[TokenKind::Plus, TokenKind::Minus])?;
-
-        // we expect the current token to be an integer
-        let right = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
+            value = match op.kind {
+                TokenKind::Plus => value + right,
+                TokenKind::Minus => value - right,
+                _ => unreachable!(),
+            };
+        }
 
         // after the above call the self.current_token is set to EOF token
         self.eat(TokenKind::Eof)?;
@@ -124,11 +129,7 @@ impl<'a> Interpreter<'a> {
         // at this point INTEGER PLUS INTEGER sequence of tokens has been
         // successfully found and the method can just return the result of
         // adding two integers, thus effectively interpreting client input
-        Ok(match op.kind {
-            TokenKind::Plus => left + right,
-            TokenKind::Minus => left - right,
-            _ => unreachable!(),
-        })
+        Ok(value)
     }
 }
 
