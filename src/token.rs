@@ -2,6 +2,7 @@
 pub enum Kind {
     Integer,
     Plus,
+    Minus,
     Eof,
 }
 

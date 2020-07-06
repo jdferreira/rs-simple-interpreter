@@ -8,95 +8,127 @@ struct Interpreter<'a> {
     source: &'a str,
     chars: Chars<'a>,
     pos: usize,
-    current_token: Option<Token<'a>>,
+    byte_pos: usize,
+    current_char: Option<char>,
 }
 
 impl<'a> Interpreter<'a> {
     pub fn new(source: &'a str) -> Self {
+        let mut chars = source.chars();
+        let current_char = chars.next();
+
         Interpreter {
             source,
-            chars: source.chars(),
+            chars,
             pos: 0,
-            current_token: None,
+            byte_pos: 0,
+            current_char,
         }
     }
 
-    fn next_char(&mut self) -> Option<char> {
-        let result = self.chars.next();
+    fn advance(&mut self) -> &'a str{
+        let start = self.byte_pos;
 
-        if let Some(c) = result {
-            self.pos += c.len_utf8();
+        if let Some(c) = self.current_char {
+            self.pos += 1;
+            self.byte_pos += c.len_utf8();
         }
 
-        result
+        self.current_char = self.chars.next();
+
+        &self.source[start..self.byte_pos]
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self
+            .current_char
+            .map(|c| c.is_ascii_whitespace())
+            .unwrap_or(false)
+        {
+            self.advance();
+        }
+    }
+
+    fn integer(&mut self) -> &'a str {
+        let start = self.byte_pos;
+
+        while self
+            .current_char
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
+        {
+            self.advance();
+        }
+
+        &self.source[start..self.byte_pos]
     }
 
     fn next_token(&mut self) -> Result<Token<'a>, String> {
-        let c = match self.next_char() {
-            Some(c) => c,
-            None => return Ok(Token::new_empty(TokenKind::Eof)),
-        };
+        while let Some(c) = self.current_char {
+            if c.is_ascii_whitespace() {
+                self.skip_whitespace();
+                continue;
+            }
 
-        if c.is_ascii_digit() {
-            Ok(Token::new(TokenKind::Integer, self.span(1)))
-        } else if c == '+' {
-            Ok(Token::new(TokenKind::Plus, self.span(1)))
-        } else {
-            Err(format!(
-                "Cannot process the character '{}' at position {}",
-                c, self.pos
-            ))
+            return if c.is_ascii_digit() {
+                Ok(Token::new(TokenKind::Integer, self.integer()))
+            } else if c == '+' {
+                Ok(Token::new(TokenKind::Plus, self.advance()))
+            } else if c == '-' {
+                Ok(Token::new(TokenKind::Minus, self.advance()))
+            } else {
+                Err(format!(
+                    "Cannot process the character '{}' at position {}",
+                    c, self.pos
+                ))
+            };
         }
+
+        Ok(Token::new_empty(TokenKind::Eof))
     }
 
-    fn span(&self, len: usize) -> &'a str {
-        self.source.get(self.pos - len..self.pos).unwrap()
+    fn eat(&mut self, expected: TokenKind) -> Result<Token<'a>, String> {
+        self.eat_alt(&[expected])
     }
 
-    fn eat(&mut self, expected: TokenKind) -> Result<(), String> {
+    fn eat_alt(&mut self, expected: &[TokenKind]) -> Result<Token<'a>, String> {
         // Compare the current token type with the expected one and if they
         // match then go through the current token and assign the next token to
         // the self.current_token; otherwise return an error.
 
-        if let Some(ref t) = self.current_token {
-            if t.kind == expected {
-                self.current_token = Some(self.next_token()?);
+        let token = self.next_token()?;
 
-                Ok(())
-            } else {
-                Err(format!("Unexpected token {:?}", t))
-            }
+        if expected.contains(&token.kind) {
+            Ok(token)
         } else {
-            Err(format!("Unexpected empty token"))
+            Err(format!("Unexpected token {:?}", token))
         }
     }
 
     fn expr(&mut self) -> Result<i64, String> {
         // expt -> INTEGER PLUS INTEGER
+        // expt -> INTEGER MINUS INTEGER
 
-        // set current token to the first token taken from the input
-        self.current_token = Some(self.next_token()?);
+        // we expect the current token to be an integer
+        let left = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
 
-        // we expect the current token to be a single-digit integer
-        let left = self.current_token.clone().unwrap();
-        self.eat(TokenKind::Integer)?;
+        // we expect the current token to be a '+' or '-' token
+        let op = self.eat_alt(&[TokenKind::Plus, TokenKind::Minus])?;
 
-        // we expect the current token to be a '+' token
-        let op = self.current_token.clone().unwrap();
-        self.eat(TokenKind::Plus)?;
-
-        // we expect the current token to be a single-digit integer
-        let right = self.current_token.clone().unwrap();
-        self.eat(TokenKind::Integer)?;
+        // we expect the current token to be an integer
+        let right = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
 
         // after the above call the self.current_token is set to EOF token
+        self.eat(TokenKind::Eof)?;
 
         // at this point INTEGER PLUS INTEGER sequence of tokens has been
         // successfully found and the method can just return the result of
         // adding two integers, thus effectively interpreting client input
-        let result = left.source.parse::<i64>().unwrap() + right.source.parse::<i64>().unwrap();
-
-        Ok(result)
+        Ok(match op.kind {
+            TokenKind::Plus => left + right,
+            TokenKind::Minus => left - right,
+            _ => unreachable!(),
+        })
     }
 }
 
