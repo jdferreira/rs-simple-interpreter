@@ -1,12 +1,14 @@
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Kind {
     Integer,
     Plus,
     Minus,
+    Star,
+    Slash,
     Eof,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
     pub kind: Kind,
     pub source: &'a str,
@@ -15,12 +17,5 @@ pub struct Token<'a> {
 impl<'a> Token<'a> {
     pub fn new(kind: Kind, source: &'a str) -> Self {
         Token { kind, source }
-    }
-
-    pub fn new_empty(kind: Kind) -> Self {
-        Token {
-            kind,
-            source: "",
-        }
     }
 }
