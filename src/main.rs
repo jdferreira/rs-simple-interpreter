@@ -76,6 +76,10 @@ impl<'a> Interpreter<'a> {
                 Ok(Token::new(TokenKind::Plus, self.advance()))
             } else if c == '-' {
                 Ok(Token::new(TokenKind::Minus, self.advance()))
+            } else if c == '*' {
+                Ok(Token::new(TokenKind::Star, self.advance()))
+            } else if c == '/' {
+                Ok(Token::new(TokenKind::Slash, self.advance()))
             } else {
                 Err(format!(
                     "Cannot process the character '{}' at position {}",
@@ -108,12 +112,19 @@ impl<'a> Interpreter<'a> {
     fn expr(&mut self) -> Result<i64, String> {
         // expt -> INTEGER PLUS INTEGER
         // expt -> INTEGER MINUS INTEGER
+        // expt -> INTEGER STAR INTEGER
+        // expt -> INTEGER SLASH INTEGER
 
         // we expect the current token to be an integer
         let left = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
 
-        // we expect the current token to be a '+' or '-' token
-        let op = self.eat_alt(&[TokenKind::Plus, TokenKind::Minus])?;
+        // we expect the current token to be a binary operator
+        let op = self.eat_alt(&[
+            TokenKind::Plus,
+            TokenKind::Minus,
+            TokenKind::Star,
+            TokenKind::Slash,
+        ])?;
 
         // we expect the current token to be an integer
         let right = self.eat(TokenKind::Integer)?.source.parse::<i64>().unwrap();
@@ -127,6 +138,8 @@ impl<'a> Interpreter<'a> {
         Ok(match op.kind {
             TokenKind::Plus => left + right,
             TokenKind::Minus => left - right,
+            TokenKind::Star => left * right,
+            TokenKind::Slash => left / right,
             _ => unreachable!(),
         })
     }

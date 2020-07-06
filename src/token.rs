@@ -3,6 +3,8 @@ pub enum Kind {
     Integer,
     Plus,
     Minus,
+    Star,
+    Slash,
     Eof,
 }
 
