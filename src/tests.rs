@@ -1,4 +1,5 @@
-use super::Interpreter;
+use super::token::{Kind as TokenKind, Token};
+use super::{Interpreter, TokenError};
 
 #[test]
 fn it_correctly_interpret_expressions() {
@@ -19,5 +20,29 @@ fn it_correctly_interpret_expressions() {
             Interpreter::new(source).unwrap().interpret().unwrap(),
             result
         );
+    }
+}
+
+#[test]
+fn it_expects_the_correct_token_on_errors() {
+    let result = Interpreter::new("3-*1").unwrap().interpret();
+
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+
+    if let TokenError::Unexpected {
+        current,
+        pos,
+        expected,
+    } = err
+    {
+        assert_eq!(current.kind, TokenKind::Star);
+        assert_eq!(pos, 3);
+        assert!(expected.contains(&TokenKind::Integer));
+        assert!(expected.contains(&TokenKind::Minus));
+        assert!(expected.contains(&TokenKind::LParen));
+    } else {
+        panic!("Unexpected error");
     }
 }

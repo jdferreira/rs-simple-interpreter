@@ -85,7 +85,7 @@ impl<'a> Interpreter<'a> {
         self.eat_alt(&[expected])
     }
 
-    /// `factor : INTEGER`
+    /// `factor : MINUS factor | INTEGER | LPAREN expr RPAREN`
     fn factor(&mut self) -> Result<i64, TokenError<'a>> {
         if self.current_token.kind == TokenKind::Minus {
             self.eat(TokenKind::Minus)?;
@@ -101,7 +101,7 @@ impl<'a> Interpreter<'a> {
             Err(TokenError::Unexpected {
                 current: self.current_token,
                 pos: self.lexer.pos(),
-                expected: vec![TokenKind::Integer, TokenKind::LParen],
+                expected: vec![TokenKind::Integer, TokenKind::Minus, TokenKind::LParen],
             })
         }
     }
@@ -156,11 +156,11 @@ impl<'a> Interpreter<'a> {
     }
 
     fn interpret(&mut self) -> Result<i64, TokenError<'a>> {
-        let result = self.expr();
+        let result = self.expr()?;
 
         self.eat(TokenKind::Eof)?;
 
-        result
+        Ok(result)
     }
 }
 
