@@ -5,6 +5,7 @@ use lexer::Lexer;
 use std::io::{self, BufRead, Write};
 use token::{Kind as TokenKind, Token};
 
+#[derive(Debug)]
 struct Interpreter<'a> {
     lexer: Lexer<'a>,
     current_token: Token<'a>,
@@ -13,6 +14,7 @@ struct Interpreter<'a> {
 enum TokenError<'a> {
     Unexpected {
         current: Token<'a>,
+        pos: usize,
         expected: Vec<TokenKind>,
     },
     Other(String),
@@ -21,9 +23,13 @@ enum TokenError<'a> {
 impl<'a> From<TokenError<'a>> for String {
     fn from(e: TokenError<'a>) -> String {
         match e {
-            TokenError::Unexpected { current, expected } => format!(
-                "Unexpected token {:?} (expecting {:?})",
-                current, expected
+            TokenError::Unexpected {
+                current,
+                pos,
+                expected,
+            } => format!(
+                "Unexpected {:?} at position {} (expecting {:?})",
+                current, pos, expected
             ),
             TokenError::Other(e) => e,
         }
@@ -63,6 +69,7 @@ impl<'a> Interpreter<'a> {
         } else {
             Err(TokenError::Unexpected {
                 current: token,
+                pos: self.lexer.pos(),
                 expected: expected.iter().cloned().collect(),
             })
         }
@@ -74,7 +81,20 @@ impl<'a> Interpreter<'a> {
 
     /// `factor : INTEGER`
     fn factor(&mut self) -> Result<i64, TokenError<'a>> {
-        Ok(self.eat(TokenKind::Integer)?.source.parse().unwrap())
+        if self.current_token.kind == TokenKind::Integer {
+            Ok(self.eat(TokenKind::Integer)?.source.parse().unwrap())
+        } else if self.current_token.kind == TokenKind::LParen {
+            self.eat(TokenKind::LParen)?;
+            let result = self.expr()?;
+            self.eat(TokenKind::RParen)?;
+            Ok(result)
+        } else {
+            Err(TokenError::Unexpected {
+                current: self.current_token,
+                pos: self.lexer.pos(),
+                expected: vec![TokenKind::Integer, TokenKind::LParen],
+            })
+        }
     }
 
     /// `term : factor ((STAR | SLASH) factor)*`
@@ -123,10 +143,15 @@ impl<'a> Interpreter<'a> {
             };
         }
 
-        // expect to be at the end of the text
+        Ok(value)
+    }
+
+    fn interpret(&mut self) -> Result<i64, TokenError<'a>> {
+        let result = self.expr();
+
         self.eat(TokenKind::Eof)?;
 
-        Ok(value)
+        result
     }
 }
 
@@ -150,9 +175,15 @@ fn run() -> Result<(), String> {
         };
 
         let lexer = Lexer::new(&text);
-        let mut interpreter = Interpreter::new(lexer)?;
+        let mut interpreter = match Interpreter::new(lexer) {
+            Ok(i) => i,
+            Err(e) => {
+                println!("{}", String::from(e));
+                continue;
+            }
+        };
 
-        match interpreter.expr() {
+        match interpreter.interpret() {
             Ok(result) => println!("{}", result),
             Err(e) => println!("{}", String::from(e)),
         }

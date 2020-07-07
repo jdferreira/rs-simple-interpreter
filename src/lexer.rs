@@ -1,6 +1,7 @@
 use std::str::Chars;
 use crate::token::{Token, Kind as TokenKind};
 
+#[derive(Debug)]
 pub struct Lexer<'a> {
     source: &'a str,
     chars: Chars<'a>,
@@ -21,6 +22,10 @@ impl<'a> Lexer<'a> {
             byte_pos: 0,
             current_char,
         }
+    }
+
+    pub fn pos(&self) -> usize {
+        self.pos
     }
 
     fn advance(&mut self) -> &'a str {
@@ -76,6 +81,10 @@ impl<'a> Lexer<'a> {
                 Ok(Token::new(TokenKind::Star, self.advance()))
             } else if c == '/' {
                 Ok(Token::new(TokenKind::Slash, self.advance()))
+            } else if c == '(' {
+                Ok(Token::new(TokenKind::LParen, self.advance()))
+            } else if c == ')' {
+                Ok(Token::new(TokenKind::RParen, self.advance()))
             } else {
                 Err(format!(
                     "Cannot process the character '{}' at position {}",

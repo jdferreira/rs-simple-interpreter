@@ -5,6 +5,8 @@ pub enum Kind {
     Minus,
     Star,
     Slash,
+    LParen,
+    RParen,
     Eof,
 }
 
