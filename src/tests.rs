@@ -4,6 +4,8 @@ use super::Interpreter;
 fn it_correctly_interpret_expressions() {
     let tests = vec![
         ("3", 3),
+        ("-5", -5),
+        ("1 * -7", -7),
         ("7 - 8 / 4", 5),
         ("2 + 7 * 4", 30),
         ("7 + (((3 + 2)))", 12),

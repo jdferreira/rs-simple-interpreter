@@ -87,7 +87,10 @@ impl<'a> Interpreter<'a> {
 
     /// `factor : INTEGER`
     fn factor(&mut self) -> Result<i64, TokenError<'a>> {
-        if self.current_token.kind == TokenKind::Integer {
+        if self.current_token.kind == TokenKind::Minus {
+            self.eat(TokenKind::Minus)?;
+            Ok(-self.factor()?)
+        } else if self.current_token.kind == TokenKind::Integer {
             Ok(self.eat(TokenKind::Integer)?.source.parse().unwrap())
         } else if self.current_token.kind == TokenKind::LParen {
             self.eat(TokenKind::LParen)?;
@@ -200,4 +203,3 @@ fn main() {
         println!("{}", e);
     }
 }
-
