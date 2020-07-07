@@ -37,7 +37,9 @@ impl<'a> From<TokenError<'a>> for String {
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(mut lexer: Lexer<'a>) -> Result<Self, TokenError<'a>> {
+    pub fn new(source: &'a str) -> Result<Self, TokenError<'a>> {
+        let mut lexer = Lexer::new(source);
+
         let current_token = match lexer.next_token() {
             Ok(t) => t,
             Err(e) => Err(TokenError::Other(e))?,
@@ -174,8 +176,7 @@ fn run() -> Result<(), String> {
             }
         };
 
-        let lexer = Lexer::new(&text);
-        let mut interpreter = match Interpreter::new(lexer) {
+        let mut interpreter = match Interpreter::new(&text) {
             Ok(i) => i,
             Err(e) => {
                 println!("{}", String::from(e));
