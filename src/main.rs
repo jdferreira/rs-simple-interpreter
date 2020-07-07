@@ -1,6 +1,9 @@
 mod lexer;
 mod token;
 
+#[cfg(test)]
+mod tests;
+
 use lexer::Lexer;
 use std::io::{self, BufRead, Write};
 use token::{Kind as TokenKind, Token};
@@ -11,6 +14,7 @@ struct Interpreter<'a> {
     current_token: Token<'a>,
 }
 
+#[derive(Debug)]
 enum TokenError<'a> {
     Unexpected {
         current: Token<'a>,
@@ -196,3 +200,4 @@ fn main() {
         println!("{}", e);
     }
 }
+
