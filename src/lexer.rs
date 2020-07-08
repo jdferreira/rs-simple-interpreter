@@ -1,5 +1,6 @@
+use crate::error::Error;
+use crate::token::{Kind as TokenKind, Token};
 use std::str::Chars;
-use crate::token::{Token, Kind as TokenKind};
 
 #[derive(Debug)]
 pub struct Lexer<'a> {
@@ -64,7 +65,7 @@ impl<'a> Lexer<'a> {
         &self.source[start..self.byte_pos]
     }
 
-    pub fn next_token(&mut self) -> Result<Token<'a>, String> {
+    pub(crate) fn next_token(&mut self) -> Result<Token<'a>, Error<'a>> {
         while let Some(c) = self.current_char {
             if c.is_ascii_whitespace() {
                 self.skip_whitespace();
@@ -86,10 +87,10 @@ impl<'a> Lexer<'a> {
             } else if c == ')' {
                 Ok(Token::new(TokenKind::RParen, self.advance()))
             } else {
-                Err(format!(
-                    "Cannot process the character '{}' at position {}",
-                    c, self.pos
-                ))
+                Err(Error::UnexpectedCharacter {
+                    character: c,
+                    pos: self.pos,
+                })
             };
         }
 

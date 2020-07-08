@@ -1,5 +1,6 @@
-use super::token::{Kind as TokenKind, Token};
-use super::{Interpreter, TokenError};
+use crate::error::Error;
+use crate::token::Kind as TokenKind;
+use crate::Interpreter;
 
 #[test]
 fn it_correctly_interpret_expressions() {
@@ -31,7 +32,7 @@ fn it_expects_the_correct_token_on_errors() {
 
     let err = result.unwrap_err();
 
-    if let TokenError::Unexpected {
+    if let Error::UnexpectedToken {
         current,
         pos,
         expected,
