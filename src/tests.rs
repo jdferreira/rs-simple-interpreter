@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::token::Kind as TokenKind;
-use crate::Interpreter;
 
 #[test]
 fn it_correctly_interpret_expressions() {

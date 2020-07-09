@@ -1,12 +1,14 @@
+mod ast;
 mod error;
 mod interpreter;
 mod lexer;
+mod parser;
 mod token;
 
 #[cfg(test)]
 mod tests;
 
-use interpreter::Interpreter;
+use parser::Parser;
 use std::io::{self, BufRead, Write};
 
 fn run() -> Result<(), String> {
@@ -32,18 +34,23 @@ fn run() -> Result<(), String> {
             continue;
         }
 
-        let mut interpreter = match Interpreter::new(&text) {
-            Ok(i) => i,
+        let mut parser = match Parser::new(&text) {
+            Ok(p) => p,
             Err(e) => {
                 println!("{}", e);
                 continue;
             }
         };
 
-        match interpreter.interpret() {
-            Ok(result) => println!("{}", result),
-            Err(e) => println!("{}", e),
-        }
+        let node = match parser.parse() {
+            Ok(n) => n,
+            Err(e) => {
+                println!("{}", e);
+                continue;
+            }
+        };
+
+        println!("{}", interpreter::interpret_node(&node))
     }
 }
 
